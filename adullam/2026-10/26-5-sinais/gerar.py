@@ -125,7 +125,7 @@ slides[8] = f'''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><l
   <p style="margin:32px 0 0;max-width:880px;font-size:76px;font-weight:800;line-height:1.06;letter-spacing:-.025em;text-wrap:balance">Sua empresa está no improviso.</p>
   <div style="margin-top:64px;width:100%;box-sizing:border-box;background:{LILAS};border-radius:24px;padding:56px 64px;display:flex;flex-direction:column;align-items:center">
     <p style="margin:0;font-size:42px;font-weight:600;line-height:1.3;color:{PRETO}">Comenta <span style="display:inline-block;background:{ROXO2};color:{LILAS};font-weight:800;letter-spacing:.08em;border-radius:12px;padding:2px 20px 6px">PLANO</span> aqui embaixo</p>
-    <p class="pf" style="margin:20px 0 0;max-width:760px;font-style:italic;font-weight:400;font-size:40px;line-height:1.3;color:{ROXO};text-wrap:balance">que eu te mando o primeiro passo pra sair do improviso.</p>
+    <p class="pf" style="margin:20px 0 0;max-width:760px;font-style:italic;font-weight:400;font-size:40px;line-height:1.3;color:{ROXO};text-wrap:balance">que eu te mando o checklist grátis <b>7 dias pra sair do improviso</b>.</p>
   </div>
   <div style="margin-top:48px;display:flex;gap:56px;justify-content:center">
     <div style="display:flex;align-items:center;gap:14px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{LILAS}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span style="font-size:26px;font-weight:600">Salva pra não esquecer</span></div>
