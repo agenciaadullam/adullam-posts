@@ -1,0 +1,3 @@
+trono.jpg https://images.unsplash.com/photo-1695638720523-07dba7435b22?ixlib=rb-4.1.0&q=85&fm=jpg&w=880&h=1000&fit=crop&crop=entropy
+rosto.jpg https://images.unsplash.com/photo-1563165877-8c3bf6736f07?ixlib=rb-4.1.0&q=85&fm=jpg&w=984&h=1264&fit=crop&crop=faces
+loja.jpg https://images.unsplash.com/photo-1723173330015-3e8eb2bb3333?ixlib=rb-4.1.0&q=85&fm=jpg&w=1640&h=1000&fit=crop&crop=entropy

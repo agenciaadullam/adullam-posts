@@ -1,0 +1,27 @@
+name: Baixar fotos
+on:
+  push:
+    paths: ['_sistema/baixar.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  baixar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar
+        run: |
+          mkdir -p _sistema/unsplash
+          while read -r nome url; do
+            [ -z "$nome" ] && continue
+            [ -f "_sistema/unsplash/$nome" ] && continue
+            curl -sSL --fail -o "_sistema/unsplash/$nome" "$url"
+          done < _sistema/baixar.txt
+      - name: Salvar
+        run: |
+          git config user.name "adullam-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add _sistema/unsplash
+          git diff --cached --quiet || git commit -m "Fotos baixadas"
+          git push
