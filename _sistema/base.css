@@ -1,0 +1,20 @@
+@font-face{font-family:'Montserrat';font-weight:400;font-style:normal;src:url(fonts/montserrat-latin-400-normal.woff2)}
+@font-face{font-family:'Montserrat';font-weight:500;font-style:normal;src:url(fonts/montserrat-latin-500-normal.woff2)}
+@font-face{font-family:'Montserrat';font-weight:500;font-style:italic;src:url(fonts/montserrat-latin-500-italic.woff2)}
+@font-face{font-family:'Montserrat';font-weight:600;font-style:normal;src:url(fonts/montserrat-latin-600-normal.woff2)}
+@font-face{font-family:'Montserrat';font-weight:800;font-style:normal;src:url(fonts/montserrat-latin-800-normal.woff2)}
+@font-face{font-family:'Playfair Display';font-weight:400;font-style:normal;src:url(fonts/playfair-display-latin-400-normal.woff2)}
+@font-face{font-family:'Playfair Display';font-weight:400;font-style:italic;src:url(fonts/playfair-display-latin-400-italic.woff2)}
+@font-face{font-family:'Playfair Display';font-weight:700;font-style:italic;src:url(fonts/playfair-display-latin-700-italic.woff2)}
+@font-face{font-family:'Playfair Display';font-weight:800;font-style:italic;src:url(fonts/playfair-display-latin-800-italic.woff2)}
+html,body{margin:0;padding:0}
+.slide{position:relative;width:1080px;height:1440px;overflow:hidden;font-family:'Montserrat',sans-serif}
+.pf{font-family:'Playfair Display',Georgia,serif}
+.head{position:absolute;top:72px;left:80px;right:80px;display:flex;align-items:center;justify-content:space-between}
+.head img{height:54px;width:auto;display:block}
+.count{font-size:22px;font-weight:600;letter-spacing:.14em}
+.foot{position:absolute;left:80px;right:80px;bottom:96px;display:flex;align-items:center;justify-content:space-between}
+.swipe{display:flex;align-items:center;gap:14px;font-size:24px;font-weight:600;letter-spacing:.04em}
+.handle{font-size:22px;font-weight:500}
+.tag{font-size:22px;font-weight:600;letter-spacing:.18em;text-transform:uppercase}
+.grain{position:absolute;inset:0;pointer-events:none}
