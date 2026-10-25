@@ -1,0 +1,10 @@
+whoosh.wav https://remotion.media/whoosh.wav
+whip.wav https://remotion.media/whip.wav
+page-turn.wav https://remotion.media/page-turn.wav
+switch.wav https://remotion.media/switch.wav
+click.wav https://remotion.media/mouse-click.wav
+shutter.wav https://remotion.media/shutter-modern.wav
+ding.wav https://remotion.media/ding.wav
+notificacao.wav https://remotion.media/snapchat-notification.wav
+boom.wav https://remotion.media/vine-boom.wav
+scratch.wav https://remotion.media/record-scratch.wav
