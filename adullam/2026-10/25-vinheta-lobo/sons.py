@@ -211,8 +211,15 @@ for j, f in enumerate([880.0, 1318.5, 1760.0]):
 
 # ---------- Uivo (#121 + #125) ----------
 por(sopro(0.75, 300, 1400, lambda u: u ** 1.5 * (1 - u) ** 0.3), T['uivo'], 0.12, pan=-0.6)   # respiração antes
-u_ = uivo(1.8)
-por(u_, T['uivo'] + 0.82, 0.55, pan=-0.45, rev=0.55)
+gravado = os.path.join(AQUI, 'uivo.wav')   # uivo real (mono 48 kHz); sem ele, usa o sintetizado
+if os.path.exists(gravado):
+    _, u_ = wavfile.read(gravado)
+    u_ = u_.astype(float) / 32767
+    u_ = u_[:int(2.3 * SR)] / np.max(np.abs(u_))
+    u_[-int(0.8 * SR):] *= np.linspace(1, 0, int(0.8 * SR)) ** 2   # some enquanto a boca fecha
+    por(u_, T['uivo'] + 0.8, 0.38, pan=-0.45, rev=0.4)
+else:
+    por(uivo(1.8), T['uivo'] + 0.82, 0.55, pan=-0.45, rev=0.55)
 tb = T['uivo'] + 1.1
 por(baque(60, 0.4, 0.12), tb + 0.2, 0.55, pan=-0.45)        # lub
 por(baque(70, 0.4, 0.10), tb + 0.44, 0.32, pan=-0.45)       # dub
