@@ -1,6 +1,6 @@
 # Uso: python3 sons.py   (precisa de numpy e scipy; rode depois do _sistema/render-video.js)
 # Sintetiza a trilha e os efeitos sonoros, sincronizados com a linha do tempo de animacao.html,
-# grava sons.wav e troca o áudio do video.mp4 (o vídeo não é recodificado).
+# grava sons.wav e junta com o video.mp4 (só imagem) em vinheta-adullam-com-som.mp4, sem recodificar o vídeo.
 import os, subprocess
 import numpy as np
 from scipy import signal
@@ -237,9 +237,8 @@ wavfile.write(wav, SR, (mix.T * 32767).astype(np.int16))
 print('ok sons.wav')
 
 video = os.path.join(AQUI, 'video.mp4')
-tmp = os.path.join(AQUI, 'video-tmp.mp4')
+final = os.path.join(AQUI, 'vinheta-adullam-com-som.mp4')
 subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', video, '-i', wav, '-map', '0:v', '-map', '1:a',
                 '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11',
-                '-ar', '48000', '-shortest', '-movflags', '+faststart', tmp], check=True)
-os.replace(tmp, video)
-print('ok video.mp4 com som')
+                '-ar', '48000', '-shortest', '-movflags', '+faststart', final], check=True)
+print('ok vinheta-adullam-com-som.mp4')
