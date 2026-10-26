@@ -123,7 +123,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .valores-barra { height: 3px; border-radius: 3px; background: rgba(243,238,255,.12); margin: -8px 0 24px; overflow: hidden }
 .valores-barra i { display: block; height: 100%; background: linear-gradient(90deg, var(--roxo-luz), var(--lilas)); transform-origin: 0 50% }
 /* ondas entre seções */
-.onda { display: block; width: 100%; height: clamp(48px, 7vw, 96px); margin-top: -1px }
+.onda { display: block; width: 100%; height: clamp(48px, 7vw, 96px); margin-top: -1px; margin-bottom: -1px }
 .onda-sobre { position: absolute; left: 0; right: 0; bottom: -1px }
 
 
@@ -335,7 +335,7 @@ textarea { resize: vertical; min-height: 84px }
       </div>
     </div>
     <span class="desce" aria-hidden="true"></span>
-    <svg class="onda onda-sobre" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60 C 240 10, 480 10, 720 50 S 1200 100, 1440 40 L1440 100 L0 100 Z" fill="var(--noite)"/></svg>
+    <svg class="onda onda-sobre" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true"><path d="M-300 60 C -200 60, -240 110, 0 60 C 240 10, 480 10, 720 50 S 1200 100, 1440 40 S 1700 40, 1740 40 L1740 40 L1740 100 L-300 100 Z" fill="var(--noite)"/></svg>
   </section>
 
   <!-- SERVIÇOS -->
@@ -381,7 +381,7 @@ textarea { resize: vertical; min-height: 84px }
     </div>
   <div class="faixa-caixa"><div class="faixa" aria-hidden="true"><div class="trilho"><span>Planejamento ✦ <b>Design</b> ✦ Reels ✦ <b>Gestão</b> ✦ Impulsionamento ✦ <b>Análise</b> ✦</span><span>Planejamento ✦ <b>Design</b> ✦ Reels ✦ <b>Gestão</b> ✦ Impulsionamento ✦ <b>Análise</b> ✦</span></div></div></div>
   </section>
-  <svg class="onda" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true" style="background:var(--noite)"><path d="M0 40 C 300 100, 600 0, 900 50 S 1300 90, 1440 30 L1440 100 L0 100 Z" fill="var(--lilas)"/></svg>
+  <svg class="onda" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true" style="background:var(--noite)"><path d="M-300 40 C -200 40, -300 -20, 0 40 C 300 100, 600 0, 900 50 S 1300 90, 1440 30 S 1700 30, 1740 30 L1740 30 L1740 100 L-300 100 Z" fill="var(--lilas)"/></svg>
 
   <!-- QUEM SOMOS -->
   <section class="sobre" id="sobre" aria-labelledby="t-sobre">
@@ -440,7 +440,7 @@ textarea { resize: vertical; min-height: 84px }
     </div>
   <div class="faixa-caixa"><div class="faixa clara" aria-hidden="true"><div class="trilho"><span>Verdade ✦ <b>Constância</b> ✦ Proximidade ✦ <b>Estratégia</b> ✦ Alcateia ✦</span><span>Verdade ✦ <b>Constância</b> ✦ Proximidade ✦ <b>Estratégia</b> ✦ Alcateia ✦</span></div></div></div>
   </section>
-  <svg class="onda" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true" style="background:var(--lilas)"><path d="M0 50 C 360 0, 720 100, 1080 40 S 1380 20, 1440 50 L1440 100 L0 100 Z" fill="var(--profundo)"/></svg>
+  <svg class="onda" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true" style="background:var(--lilas)"><path d="M-300 50 C -150 50, -120 67, 0 50 C 360 0, 720 100, 1080 50 C 1260 25, 1380 40, 1440 45 C 1500 50, 1600 50, 1740 50 L1740 100 L-300 100 Z" fill="var(--profundo)"/></svg>
 
   <!-- CONTATO -->
   <section class="contato" id="contato" aria-labelledby="t-cont">
@@ -709,8 +709,8 @@ textarea { resize: vertical; min-height: 84px }
 
     // ===== quebra de página: cada seção abre como um cartão que cresce até ocupar a tela =====
     ['.servicos', '.sobre', '.contato'].forEach(sel => {
-      G.fromTo(sel, {clipPath: 'inset(9% 5% 0% 5% round 60px)'}, {clipPath: 'inset(0% 0% 0% 0% round 0px)', ease: 'none', scrollTrigger: {trigger: sel, start: 'top bottom', end: 'top 20%', scrub: true}});
-      if (sel !== '.sobre') G.from(sel + ' > .wrap', {y: 90, ease: 'none', scrollTrigger: {trigger: sel, start: 'top bottom', end: 'top 20%', scrub: true}});
+      // sem recorte nas laterais: a onda faz a virada e o conteúdo da seção sobe e cresce até o lugar
+      if (sel !== '.sobre') G.fromTo(sel + ' > .wrap', {y: 110, scale: 0.94, autoAlpha: 0.2}, {y: 0, scale: 1, autoAlpha: 1, ease: 'none', scrollTrigger: {trigger: sel, start: 'top bottom', end: 'top 25%', scrub: true}});
     });
 
     // ===== palavras importantes: grifo que corre + pulso + brilho contínuo =====
