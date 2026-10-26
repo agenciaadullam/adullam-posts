@@ -251,7 +251,6 @@ textarea { resize: vertical; min-height: 84px }
   .desce { bottom: 76px }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important }
   html { scroll-behavior: auto }
 }
 </style>
@@ -601,7 +600,7 @@ textarea { resize: vertical; min-height: 84px }
   G.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
   const mm = G.matchMedia();
 
-  mm.add({mov: '(prefers-reduced-motion: no-preference)', desk: '(min-width: 900px)'}, (ctx) => {
+  mm.add({todos: 'all', mov: '(prefers-reduced-motion: no-preference)', desk: '(min-width: 900px)'}, (ctx) => {
     const calmo = !ctx.conditions.mov;
     const desk = ctx.conditions.desk && !calmo;
     const sim = $('#simbolo img'), letras = $$('.pal img'), uivo = $$('.uivo path');
