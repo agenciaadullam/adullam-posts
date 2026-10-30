@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Vinheta Adullam — lobo uivando</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0814; }
+  canvas { display: block; height: 100vh; width: auto; margin: 0 auto; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="logo-vetor.js"></script>
+<script>
+// Vinheta 1080x1920 da Adullam. desenhar(t) é uma função pura do tempo t (segundos):
+// abrir o arquivo no navegador toca em loop; _sistema/render-video.js grava o MP4 quadro a quadro.
+//
+// Movimentos usados (números e curvas tirados das specs):
+// Motion Prompt #001-024 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#001
+// Motion Prompt #004 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#004
+// Motion Prompt #010 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#010
+// Motion Prompt #011 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#011
+// Motion Prompt #017 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#017
+// Motion Prompt #121 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#121
+// Motion Prompt #123 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#123
+// Motion Prompt #125 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#125
+
+const W = 1080, H = 1920, FPS = 30, DUR = 14;
+const ROXO = '#622DFF', BRANCO = '#FFFFFF';
+const FONTE = '800 58px Montserrat';
+const PX = 2;  // as specs são de cards 539x208; aqui as distâncias valem o dobro
+
+// Ajudantes do kit "motion"
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const P = (t, a, b) => clamp((t - a) / (b - a));
+const eIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eIOs = x => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+const eOut = x => 1 - Math.pow(1 - x, 3);
+const backOut = (x, s = 1.70158) => 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2);
+const spring = (t, w = 14, d = 7) => t <= 0 ? 0 : 1 - Math.exp(-d * t) * Math.cos(w * t);
+function rand(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+
+const cv = document.getElementById('c'), k = cv.getContext('2d');
+const camada = new OffscreenCanvas(W, H), kc = camada.getContext('2d');
+const acum = new OffscreenCanvas(W, H), ka = acum.getContext('2d');
+
+// ---------- Linha do tempo (s) ----------
+const T = {
+  pouso0: 0.3, hop: 0.6,             // cápsula: pousos em 0.3, 0.9, 1.5, 2.1
+  some: 2.6,                          // frase some 2.6–2.8
+  bola: 2.1,                          // a cápsula vira bola (#123)
+  abre: 4.15, abreDur: 1.15,          // círculo abre (#017)
+  letras: 5.45, letraGap: 0.1,        // letras de "adullam" caem (#011)
+  tag: 6.3,                           // "AGÊNCIA DE MARKETING"
+  desliza: 6.7, traco: 6.9, preenche: 7.5, revela: 7.6,   // distintivo (#004)
+  fecha: 8.0, fechaDur: 1.15,         // fundo fecha no distintivo (#017 ao contrário) e assenta (#010)
+  uivo: 9.7,                          // antecipação 0.75 s + impulso 0.43 s (#121), pulso (#125)
+  volta: 12.05,
+  sai: 12.7,                          // recuo 0.45 s + arranque 0.43 s (#121)
+};
+
+// ---------- Logo vetorizado ----------
+const LP = {
+  body: new Path2D(LOGO.body), jaw: new Path2D(LOGO.jaw), tag: new Path2D(LOGO.tagline),
+  letters: LOGO.letters.map(l => ({ cx: (l.x0 + l.x1) / 2, p: new Path2D(l.d) })),
+};
+const B = LOGO.badge, S = 864 / 793, LCX = 400.5, LCY = 104, BASE = 136;
+const X = (x, dx = 0, sc = 1) => W / 2 + dx + (x - LCX) * S * sc;
+const Y = (y, sc = 1) => H / 2 + (y - LCY) * S * sc;
+const RB = B.r * S;                                   // raio do distintivo na tela
+const BX0 = X(B.cx), BY0 = Y(B.cy);
+const DX0 = (LCX - (234 + 796) / 2) * S;              // "adullam" centrado sozinho antes do distintivo
+
+// ---------- Fundo final: o degradê da imagem de referência ----------
+const fundo = (() => {
+  const c = new OffscreenCanvas(W, H), g = c.getContext('2d');
+  g.fillStyle = '#6A33FF'; g.fillRect(0, 0, W, H);
+  const rad = (x, y, r, col, a0, mid = null) => {
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, `rgba(${col},${a0})`);
+    if (mid) gr.addColorStop(mid[0], `rgba(${col},${mid[1]})`);
+    gr.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  };
+  rad(980, 120, 1150, '140,96,255', 0.95);
+  rad(40, 760, 900, '96,40,255', 0.85);
+  rad(1100, 1380, 760, '88,36,240', 0.75);
+  rad(560, 1880, 1150, '17,13,30', 1, [0.42, 0.86]);
+  rad(-60, 1980, 640, '214,206,236', 0.95);
+  // grão leve para o degradê não fazer faixas no H.264
+  const img = g.getImageData(0, 0, W, H), d = img.data, r = rand(7);
+  for (let i = 0; i < d.length; i += 4) { const n = (r() - 0.5) * 6; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+  g.putImageData(img, 0, 0);
+  return c;
+})();
+
+// ---------- Cena 1: cápsula com squash & stretch (#011) escrevendo a frase ----------
+const LINHAS = [['UMA', 'AGÊNCIA,'], ['INFINITAS', 'POSSIBILIDADES']];
+const BASES = [920, 1000];
+let PALAVRAS = [];
+function medir() {
+  k.font = FONTE; k.letterSpacing = '2px';
+  const esp = k.measureText(' ').width;
+  PALAVRAS = [];
+  LINHAS.forEach((ws, li) => {
+    const larg = ws.map(w => k.measureText(w).width);
+    const total = larg.reduce((a, b) => a + b, 0) + esp * (ws.length - 1);
+    let x = W / 2 - total / 2;
+    ws.forEach((w, i) => { PALAVRAS.push({ w, x, y: BASES[li], fim: x + larg[i] }); x += larg[i] + esp; });
+  });
+  k.letterSpacing = '0px';
+}
+const CAP_W = 40, CAP_H = 68, HOP_H = 92 * PX;
+
+// Um pulo do #011: q de 0 a 1; no chão nos primeiros e últimos 10%, no ar no meio.
+function pulo(q, a, b, alt) {
+  const c = 0.1;
+  if (q < c || q > 1 - c) {
+    const d = (q < c ? q : 1 - q) / c;
+    const p = q < c ? a : b;
+    return { x: p.x, y: p.y, sy: lerp(0.52, 1.28, d * d) };
+  }
+  const qq = (q - c) / (1 - 2 * c), sp = Math.abs(2 * qq - 1), e = eIOs(qq);
+  return { x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e) - alt * (1 - sp * sp), sy: 1 + 0.28 * Math.pow(sp, 3) };
+}
+const pousoDe = i => ({ x: PALAVRAS[i].fim + 30, y: PALAVRAS[i].y });
+
+// #123: a bola sobe da última palavra e quica cada vez mais baixo até parar no centro.
+const G = 1900 * PX, REST = 0.56, V_MIN = 35 * PX;
+const VOOS = (() => {
+  const vs = []; let t = T.bola + 0.06, v = Math.sqrt(2 * G * 190 * PX);
+  while (v > V_MIN) { const d = 2 * v / G; vs.push({ t0: t, t1: t + d, v }); t += d; v *= REST; }
+  return vs;
+})();
+function bola(t) {
+  const voo = VOOS.find(f => t >= f.t0 && t < f.t1);
+  const s = voo ? t - voo.t0 : 0, h = voo ? voo.v * s - G * s * s / 2 : 0;
+  const imp = VOOS.map(f => ({ t: f.t1, v: f.v })).find(i => t >= i.t - 0.045 && t < i.t + 0.3);
+  const sq = imp && Math.abs(t - imp.t) < 0.045 ? 0.4 * Math.min(1, imp.v / (850 * PX)) * (1 - Math.abs(t - imp.t) / 0.045) : 0;
+  return { h, sq, imp };
+}
+
+function capsula(k, x, yPe, sx, sy, w, hgt, cor) {
+  k.save(); k.translate(x, yPe); k.scale(sx, sy);
+  k.fillStyle = cor; k.beginPath(); k.roundRect(-w / 2, -hgt, w, hgt, w / 2); k.fill();
+  k.restore();
+}
+function respingos(k, x, yPe, t0, t, dur, cor) {          // risquinhos que saem dos lados no pouso
+  const u = (t - t0) / dur; if (u < 0 || u >= 1) return;
+  k.strokeStyle = cor; k.lineWidth = 5 * PX * 0.8 * (1 - u); k.lineCap = 'round';
+  [-1, 1].forEach(s => { k.beginPath(); k.moveTo(x + s * (40 + 34 * u), yPe - 8 - 14 * u); k.lineTo(x + s * (56 + 50 * u), yPe - 16 - 28 * u); k.stroke(); });
+}
+
+function cena1(t) {
+  const pousos = PALAVRAS.map((_, i) => T.pouso0 + T.hop * i);
+  const n = pousos.filter(p => t >= p).length;
+  const roxo = n % 2 === 1;
+  const fundoCor = roxo ? ROXO : BRANCO, tinta = roxo ? BRANCO : ROXO;
+  k.fillStyle = fundoCor; k.fillRect(0, 0, W, H);
+
+  // palavras: entram um pouco abaixo e sobem para o lugar
+  const sumir = 1 - P(t, T.some, T.some + 0.2);
+  k.font = FONTE; k.letterSpacing = '2px'; k.textBaseline = 'alphabetic'; k.textAlign = 'left';
+  PALAVRAS.forEach((p, i) => {
+    const u = P(t, pousos[i], pousos[i] + 0.25); if (u <= 0) return;
+    k.globalAlpha = Math.min(1, u * 3) * sumir;
+    k.fillStyle = tinta; k.fillText(p.w, p.x, p.y + 26 * (1 - backOut(u)));
+  });
+  k.globalAlpha = 1; k.letterSpacing = '0px';
+
+  pousos.forEach((p, j) => { const pp = pousoDe(j); respingos(k, pp.x, pp.y, p - 0.02, t, 0.18 * T.hop, tinta); });
+  if (t < T.bola + 0.06) {
+    // pulos do #011 entre as palavras (o primeiro vem de cima, fora da tela)
+    const i = Math.floor((t - T.pouso0) / T.hop + 1);     // pulo que termina no pouso i
+    const q = (t - (T.pouso0 + T.hop * (i - 1))) / T.hop;
+    const b = pousoDe(Math.min(i, PALAVRAS.length - 1));
+    const a = i === 0 ? { x: b.x, y: b.y } : pousoDe(i - 1);
+    const s = pulo(q, a, b, i === 0 ? 1100 : HOP_H);
+    capsula(k, s.x, s.y, 1 / s.sy, s.sy, CAP_W, CAP_H, tinta);
+  } else {
+    // #123: vira bola e quica até parar no centro
+    const a = pousoDe(PALAVRAS.length - 1), chao = a.y;
+    const x = lerp(a.x, W / 2, eOut(P(t, T.bola + 0.1, T.bola + 1.8)));
+    const { h, sq, imp } = bola(t);
+    const hgt = lerp(CAP_H, CAP_W, eOut(P(t, T.bola, T.bola + 0.5)));
+    capsula(k, x, chao - h, 1 + sq, 1 - sq, CAP_W, hgt, tinta);
+    if (imp && imp.v > 200 * PX) respingos(k, x, chao, imp.t, t, 0.3, tinta);
+  }
+}
+const CENTRO_BOLA = () => ({ x: W / 2, y: pousoDe(PALAVRAS.length - 1).y - CAP_W / 2 });
+
+// ---------- Logo: distintivo com o lobo animado + letras ----------
+function distintivo(kk, st) {
+  // st: x, y (centro na tela), esc, sx, sy (ancorados na base), giro, inclina,
+  //     contorno (0..1), cheio (0..1), lobo (0..1 revelado de baixo para cima),
+  //     cabeca, csx, csy, mandibula
+  kk.save();
+  kk.translate(st.x, st.y + RB * st.esc); kk.rotate(st.inclina); kk.scale(st.sx, st.sy); kk.translate(0, -RB * st.esc);
+  kk.rotate(st.giro); kk.scale(S * st.esc, S * st.esc); kk.translate(-B.cx, -B.cy);
+  if (st.cheio > 0) {
+    kk.fillStyle = BRANCO; kk.globalAlpha = Math.min(1, st.cheio * 1.5);
+    kk.beginPath(); kk.arc(B.cx, B.cy, B.r * lerp(0.55, 1, eOut(st.cheio)), 0, Math.PI * 2); kk.fill();
+    kk.globalAlpha = 1;
+  }
+  if (st.lobo > 0) {
+    kk.save(); kk.globalCompositeOperation = 'destination-out';
+    kk.beginPath(); kk.arc(B.cx, B.cy, B.r, 0, Math.PI * 2); kk.clip();
+    const yTopo = lerp(B.cy + B.r + 70, B.cy - B.r - 2, st.lobo);
+    kk.beginPath(); kk.rect(B.cx - B.r - 2, yTopo, 2 * B.r + 4, 400); kk.clip();
+    const [nx, ny] = LOGO.neckPivot, [jx, jy] = LOGO.jawPivot;
+    kk.translate(nx, ny); kk.rotate(st.cabeca); kk.scale(st.csx, st.csy); kk.translate(-nx, -ny);
+    kk.fill(LP.body);
+    kk.translate(jx, jy); kk.rotate(st.mandibula); kk.translate(-jx, -jy);
+    kk.fill(LP.jaw);
+    kk.restore();
+  }
+  kk.restore();
+  if (st.contorno > 0 && st.contorno < 1.2) {            // #004: o contorno se desenha no sentido horário a partir do topo
+    const p = Math.min(1, st.contorno), a0 = -Math.PI / 2, a1 = a0 + p * Math.PI * 2;
+    const r = RB * st.esc - 7, sumir = 1 - P(st.contorno, 1, 1.2);
+    kk.save(); kk.globalAlpha = sumir;
+    kk.strokeStyle = BRANCO; kk.lineWidth = 7 * PX; kk.lineCap = 'round';
+    kk.beginPath(); kk.arc(st.x, st.y, r, a0, a1); kk.stroke();
+    if (p < 1) {
+      const px = st.x + Math.cos(a1) * r, py = st.y + Math.sin(a1) * r;
+      kk.fillStyle = BRANCO; kk.beginPath(); kk.arc(px, py, 12 * PX * 0.75, 0, Math.PI * 2); kk.fill();
+      kk.fillStyle = ROXO; kk.beginPath(); kk.arc(px, py, 5 * PX * 0.75, 0, Math.PI * 2); kk.fill();
+    }
+    kk.restore();
+  }
+}
+
+function letras(kk, t, dx, sc, corteX) {
+  kk.save();
+  if (corteX > -Infinity) { kk.beginPath(); kk.rect(corteX, 0, W, H); kk.clip(); }
+  kk.fillStyle = BRANCO;
+  LP.letters.forEach((l, i) => {
+    const t0 = T.letras + T.letraGap * i, u = t - t0;
+    if (u < 0) return;
+    // #011: cai do alto esticada, amassa a 0.52 no impacto e volta a 1 com um balanço
+    const queda = 0.3;
+    let dy, sy;
+    if (u < queda) { const sp = u / queda; dy = -HOP_H * (1 - sp * sp); sy = 1 + 0.28 * Math.pow(sp, 3); }
+    else { dy = 0; sy = 0.52 + 0.48 * spring(u - queda, 14, 7); }
+    kk.save(); kk.globalAlpha = Math.min(1, u / 0.08);
+    kk.translate(X(l.cx, dx, sc), Y(BASE, sc) + dy); kk.scale(S * sc / sy, S * sc * sy); kk.translate(-l.cx, -BASE);
+    kk.fill(l.p); kk.restore();
+    if (u >= queda) respingos(kk, X(l.cx, dx, sc), Y(BASE, sc), t0 + queda, t, 0.18 * 0.6, BRANCO);
+  });
+  const ut = P(t, T.tag, T.tag + 0.3);
+  if (ut > 0) {
+    kk.save(); kk.globalAlpha = ut;
+    kk.translate(X(0, dx, sc), Y(0, sc) + 20 * (1 - eOut(ut))); kk.scale(S * sc, S * sc);
+    kk.fill(LP.tag); kk.restore();
+  }
+  kk.restore();
+}
+
+// ---------- Quadro ----------
+function quadro(t) {
+  k.setTransform(1, 0, 0, 1, 0, 0);
+  k.globalAlpha = 1; k.globalCompositeOperation = 'source-over';
+
+  // fundo
+  const fechou = t >= T.fecha;
+  if (t < T.abre + T.abreDur) cena1(t);
+  if (t >= T.abre && t < T.fecha) {
+    const p = eIO(P(t, T.abre, T.abre + T.abreDur)), c = CENTRO_BOLA();
+    const rMax = Math.hypot(Math.max(c.x, W - c.x), Math.max(c.y, H - c.y)) + 20;
+    k.fillStyle = ROXO; k.beginPath(); k.arc(c.x, c.y, p * rMax, 0, Math.PI * 2); k.fill();
+    if (p > 0 && p < 1) { k.strokeStyle = BRANCO; k.lineWidth = 7 * PX; k.stroke(); }
+  }
+  if (fechou) k.drawImage(fundo, 0, 0);
+
+  if (t < T.letras) return;
+
+  // posição e escala do logo
+  const dx = lerp(DX0, 0, eIO(P(t, T.desliza, T.desliza + 0.5)));
+  const pf = eIO(P(t, T.fecha, T.fecha + T.fechaDur));
+  const tAssenta = t - (T.fecha + T.fechaDur);
+  const sc = tAssenta < 0 ? lerp(1, 0.9, pf) : 0.9 + 0.1 * (1 - Math.exp(-4.6 * tAssenta) * Math.cos(10.5 * tAssenta));  // #010
+
+  // #017 ao contrário: o roxo fecha num círculo sobre o distintivo
+  const bx = X(B.cx, dx, sc), by = Y(B.cy, sc);
+  if (fechou) {
+    const rMax = Math.hypot(Math.max(bx, W - bx), Math.max(by, H - by)) + 20;
+    const r = lerp(rMax, RB * sc, pf);
+    const a = 1 - P(t, T.fecha + T.fechaDur, T.fecha + T.fechaDur + 0.25);
+    if (a > 0) {
+      k.save(); k.globalAlpha = a;
+      k.fillStyle = ROXO; k.beginPath(); k.arc(bx, by, r, 0, Math.PI * 2); k.fill();
+      if (pf > 0 && pf < 1) { k.strokeStyle = BRANCO; k.lineWidth = 7 * PX; k.stroke(); }
+      k.restore();
+    }
+  }
+
+  const st = { x: bx, y: by, esc: sc, sx: 1, sy: 1, giro: 0, inclina: 0,
+    contorno: eIO(P(t, T.traco, T.traco + 0.6)) + 0.2 * P(t, T.traco + 0.6, T.traco + 0.8),
+    cheio: P(t, T.preenche, T.preenche + 0.2), lobo: eIO(P(t, T.revela, T.revela + 0.3)),
+    cabeca: 0, csx: 1, csy: 1, mandibula: 0 };
+
+  // uivo, #121 na cabeça: abaixa e fecha a boca (0.75 s), joga a cabeça para o céu abrindo a boca (0.43 s), balança
+  if (t >= T.uivo) {
+    const u1 = P(t, T.uivo, T.uivo + 0.75), u2 = P(t, T.uivo + 0.75, T.uivo + 1.18), tp = t - (T.uivo + 1.18);
+    let cab, mand, csy;
+    if (u2 <= 0) { const e = eIOs(u1); cab = 0.18 * e; mand = -0.2 * e; csy = lerp(1, 0.9, e); }
+    else if (tp < 0) {
+      const b = backOut(u2, 1.1), f = Math.sin(Math.PI * Math.min(1, u2 / 0.6));
+      cab = lerp(0.18, -0.24, b); mand = lerp(-0.2, 0.3, b); csy = lerp(0.9, 1, u2) + 0.12 * f;
+    } else { cab = -0.24; mand = 0.3; csy = 1 - 0.13 * Math.exp(-7 * tp) * Math.sin(17 * tp); }
+    const v = eIO(P(t, T.volta, T.volta + 0.45));
+    st.cabeca = lerp(cab, 0, v); st.mandibula = lerp(mand, 0, v); st.csy = lerp(csy, 1, v); st.csx = 1 / st.csy;
+  }
+
+  // #125: batida dupla e dois anéis
+  const tb = t - (T.uivo + 1.1);
+  if (tb > 0 && tb < 1.3) {
+    const Gs = (c, w) => Math.exp(-Math.pow((tb - c) / w, 2));
+    st.esc *= 1 + 0.26 * Gs(0.2, 0.065) + 0.15 * Gs(0.44, 0.07);
+    [[0.16, 1], [0.40, 0.6]].forEach(([t0, forca]) => {
+      const u = P(tb, t0, t0 + 0.8); if (u <= 0 || u >= 1) return;
+      const e = eOut(u);
+      k.save(); k.globalAlpha = 0.75 * (1 - e) * forca; k.strokeStyle = BRANCO; k.lineWidth = lerp(8.5, 1.5, e) * PX;
+      k.beginPath(); k.arc(bx, by, RB * sc * lerp(1.2, 2.4, e), 0, Math.PI * 2); k.stroke(); k.restore();
+    });
+  }
+
+  // saída: #121 (recuo 0.45 s, arranque 0.43 s) rolando como roda e apagando as letras
+  let corteX = -Infinity;
+  if (t >= T.sai) {
+    const r1 = eIOs(P(t, T.sai, T.sai + 0.45)), u = P(t, T.sai + 0.45, T.sai + 0.88);
+    const alvo = W + RB * 2.2 - bx;
+    let desl = -44 * PX * r1, sx = lerp(1, 1.22, r1), sy = lerp(1, 0.76, r1), inc = -0.18 * r1;
+    if (u > 0) {
+      const b = backOut(u, 1.1), f = Math.sin(Math.PI * Math.min(1, u / 0.6));
+      desl = lerp(-44 * PX, alvo, b);
+      const v = eOut(Math.min(1, u / 0.25));
+      sx = lerp(lerp(1.22, 1, v), 1.55, f); sy = lerp(lerp(0.76, 1, v), 0.72, f);
+      inc = lerp(-0.18, 0.08, v);
+      // poeira no ponto de partida e três linhas de velocidade atrás
+      const pu = u / 0.7;
+      if (pu < 1) {
+        k.save(); k.fillStyle = BRANCO;
+        [[-1, 0.9], [0, 1.2], [1, 0.8]].forEach(([s, m], i) => {
+          k.globalAlpha = 0.5 * (1 - pu);
+          k.beginPath(); k.arc(bx - 44 * PX - RB * 0.6 + s * 34, by + RB - 10 - 18 * pu * m, (14 + 26 * pu) * m, 0, Math.PI * 2); k.fill();
+        });
+        k.restore();
+      }
+      if (u < 0.85) {
+        const cx = bx + desl, a = 1 - P(u, 0.55, 0.85);
+        k.save(); k.strokeStyle = BRANCO; k.lineCap = 'round'; k.lineWidth = 8 * PX * 0.75; k.globalAlpha = a;
+        [-0.55, 0, 0.55].forEach((o, i) => {
+          const len = (180 + 90 * (i % 2)) * Math.min(1, u / 0.2);
+          k.beginPath(); k.moveTo(cx - RB * 1.1 - len, by + o * RB); k.lineTo(cx - RB * 1.1, by + o * RB); k.stroke();
+        });
+        k.restore();
+      }
+    }
+    st.x = bx + desl; st.sx = sx; st.sy = sy; st.inclina = inc;
+    st.giro = desl / (RB * sc);
+    if (desl > 0) corteX = st.x;
+  }
+
+  letras(k, t, dx, sc, corteX);
+  kc.setTransform(1, 0, 0, 1, 0, 0); kc.clearRect(0, 0, W, H);
+  distintivo(kc, st);
+  k.drawImage(camada, 0, 0);
+}
+
+// Na arrancada da saída, várias amostras dentro do quadro viram desfoque de movimento (obturador de 180°).
+function desenhar(t) {
+  const sai = T.sai + 0.45;
+  if (t < sai - 0.05 || t > sai + 0.6) { quadro(t); return; }
+  const n = 8, obt = 0.5 / FPS;
+  ka.setTransform(1, 0, 0, 1, 0, 0);
+  for (let i = 0; i < n; i++) {
+    quadro(t + (i / (n - 1) - 0.5) * obt);
+    ka.globalAlpha = 1 / (i + 1); ka.drawImage(cv, 0, 0);
+  }
+  k.setTransform(1, 0, 0, 1, 0, 0); k.globalAlpha = 1; k.drawImage(acum, 0, 0);
+}
+
+window.FPS = FPS; window.DUR = DUR; window.desenhar = desenhar;
+window.pronto = (async () => {
+  const f = new FontFace('Montserrat', 'url(../../../_sistema/fonts/montserrat-latin-800-normal.woff2)', { weight: '800' });
+  document.fonts.add(await f.load());
+  medir();
+  if (!location.search.includes('render')) {
+    const t0 = performance.now();
+    (function loop() { desenhar(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); })();
+  }
+  return true;
+})();
+</script>
+</body>
+</html>
